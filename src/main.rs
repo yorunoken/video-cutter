@@ -1,6 +1,7 @@
+use filetime::{FileTime, set_file_times};
 use std::{
-    env,
-    process::{Command, exit},
+    env, fs,
+    process::{Command, Stdio, exit},
 };
 
 fn main() {
@@ -67,10 +68,19 @@ fn main() {
             "copy",
             &output_path,
         ])
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
         .status()
         .expect("Failed to run ffmpeg (do you have it installed?)");
 
     if status.success() {
+        let metadata = fs::metadata(input_path).expect("Failed to read input file metadata");
+
+        let modified = FileTime::from_last_access_time(&metadata);
+        let accessed = FileTime::from_last_access_time(&metadata);
+
+        set_file_times(&output_path, accessed, modified).expect("Failed to set file timestamps");
+
         println!("Video cut successfully: {}", output_path);
     } else {
         eprintln!("ffmpeg failed.");
